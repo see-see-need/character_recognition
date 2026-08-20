@@ -1,0 +1,112 @@
+{
+  "schemaVersion": 2,
+  "generatedAt": "2026-08-20T16:26:43.3449907+08:00",
+  "title": "Design System: Screen OCR",
+  "extensions": {
+    "colorMeta": {
+      "action-blue": { "role": "primary", "displayName": "Capture Blue", "canonical": "#2563EB", "tonalRamp": ["#071A3D", "#0B2A66", "#123F99", "#1D4ED8", "#2563EB", "#60A5FA", "#BFDBFE", "#EFF6FF"] },
+      "action-blue-hover": { "role": "primary", "displayName": "Capture Blue Hover", "canonical": "#1D4ED8", "tonalRamp": ["#071A3D", "#0B2A66", "#123F99", "#1D4ED8", "#2563EB", "#60A5FA", "#BFDBFE", "#EFF6FF"] },
+      "action-blue-pressed": { "role": "primary", "displayName": "Capture Blue Pressed", "canonical": "#1E40AF", "tonalRamp": ["#071A3D", "#0B2A66", "#123F99", "#1E40AF", "#2563EB", "#60A5FA", "#BFDBFE", "#EFF6FF"] },
+      "action-blue-soft": { "role": "primary", "displayName": "Shortcut Wash", "canonical": "#E7EEFF", "tonalRamp": ["#071A3D", "#0B2A66", "#123F99", "#1D4ED8", "#2563EB", "#60A5FA", "#BFDBFE", "#EFF6FF"] },
+      "canvas": { "role": "neutral", "displayName": "Quiet Canvas", "canonical": "#F7F8FA", "tonalRamp": ["#17191D", "#30343B", "#555B66", "#7E8591", "#A8AFBA", "#CDD2D9", "#E8EBEF", "#F7F8FA"] },
+      "surface": { "role": "neutral", "displayName": "Clean Surface", "canonical": "#FFFFFF", "tonalRamp": ["#181818", "#343434", "#5A5A5A", "#818181", "#AAAAAA", "#D0D0D0", "#ECECEC", "#FFFFFF"] },
+      "utility-panel": { "role": "neutral", "displayName": "Utility Mist", "canonical": "#EEF1F6", "tonalRamp": ["#161A20", "#303740", "#535D6A", "#7A8593", "#A5AFBB", "#CAD1DA", "#E1E6EC", "#F3F6F9"] },
+      "text-strong": { "role": "neutral", "displayName": "Strong Ink", "canonical": "#101828", "tonalRamp": ["#101828", "#263247", "#46536A", "#69758A", "#9099A8", "#B8BEC8", "#DDE0E5", "#F5F6F8"] },
+      "text-body": { "role": "neutral", "displayName": "Slate Body", "canonical": "#172033", "tonalRamp": ["#111724", "#263044", "#465269", "#69758A", "#909AA9", "#B8BEC8", "#DDE0E5", "#F5F6F8"] },
+      "text-muted": { "role": "neutral", "displayName": "Muted Slate", "canonical": "#536078", "tonalRamp": ["#141922", "#2B3442", "#536078", "#78859A", "#9EA8B7", "#C2C8D1", "#E2E5E9", "#F7F8F9"] },
+      "border": { "role": "neutral", "displayName": "Cool Hairline", "canonical": "#C9D1DF", "tonalRamp": ["#171A20", "#323843", "#596273", "#818B9C", "#AAB3C1", "#C9D1DF", "#E3E7ED", "#F7F8FA"] },
+      "error": { "role": "tertiary", "displayName": "Error Red", "canonical": "#B42318", "tonalRamp": ["#3D0B07", "#66120C", "#8E1B12", "#B42318", "#D64A3F", "#EA8178", "#F7C4BF", "#FDF1F0"] },
+      "selection-fill": { "role": "primary", "displayName": "Selection Fill", "canonical": "#BFDBFE", "tonalRamp": ["#071A3D", "#0B2A66", "#123F99", "#1D4ED8", "#2563EB", "#60A5FA", "#BFDBFE", "#EFF6FF"] },
+      "selection-text": { "role": "primary", "displayName": "Selection Ink", "canonical": "#102A56", "tonalRamp": ["#08162E", "#102A56", "#174080", "#1E58AA", "#3473C8", "#71A2E2", "#BCD2F1", "#EFF5FC"] },
+      "capture-scrim": { "role": "neutral", "displayName": "Capture Scrim", "canonical": "rgba(8, 15, 28, 0.62)", "tonalRamp": ["#080F1C", "#14233A", "#293B56", "#465A75", "#6D7F98", "#9EACBD", "#CED6DF", "#F1F4F7"] },
+      "capture-label": { "role": "neutral", "displayName": "Capture Label", "canonical": "rgba(15, 23, 42, 0.92)", "tonalRamp": ["#0F172A", "#202C42", "#3C4960", "#5F6C81", "#8590A0", "#ADB5C0", "#D5D9DF", "#F4F5F7"] },
+      "capture-outline": { "role": "primary", "displayName": "Spotlight Outline", "canonical": "#60A5FA", "tonalRamp": ["#071A3D", "#0B2A66", "#123F99", "#1D4ED8", "#2563EB", "#60A5FA", "#BFDBFE", "#EFF6FF"] }
+    },
+    "typographyMeta": {
+      "headline": { "displayName": "Main Task Headline", "purpose": "States the capture task on the main window." },
+      "title": { "displayName": "Dialog Title", "purpose": "Names focused workspaces such as recognition results." },
+      "body": { "displayName": "Interface Body", "purpose": "Supporting copy, metadata, status, and editable OCR text." },
+      "label": { "displayName": "Control Label", "purpose": "Buttons, fields, and shortcut values." }
+    }
+  },
+  "components": [
+    {
+      "name": "Primary Action Button",
+      "kind": "button",
+      "refersTo": "button-primary",
+      "description": "The capture or completion action; the main-window variant expands to full width and 52px height.",
+      "html": "<button class=\"ds-btn-primary\">开始框选</button>",
+      "css": ".ds-btn-primary { min-height: 38px; padding: 9px 15px; border: 1px solid #2563EB; border-radius: 9px; background: #2563EB; color: #FFFFFF; font: 600 14px 'Microsoft YaHei UI', 'Microsoft YaHei', sans-serif; } .ds-btn-primary:hover { background: #1D4ED8; border-color: #1D4ED8; } .ds-btn-primary:active { background: #1E40AF; } .ds-btn-primary:focus-visible { outline: 2px solid #2563EB; outline-offset: 2px; } .ds-btn-primary:disabled { color: #8993A4; background: #E8EBF0; border-color: #D7DCE5; }"
+    },
+    {
+      "name": "Secondary Button",
+      "kind": "button",
+      "refersTo": "button-secondary",
+      "description": "A compact secondary action for settings, close, and recapture.",
+      "html": "<button class=\"ds-btn-secondary\">重新框选</button>",
+      "css": ".ds-btn-secondary { padding: 9px 15px; border: 1px solid #C9D1DF; border-radius: 9px; background: #FFFFFF; color: #24324A; font: 600 14px 'Microsoft YaHei UI', 'Microsoft YaHei', sans-serif; } .ds-btn-secondary:hover { background: #F0F4FA; border-color: #AAB6C8; } .ds-btn-secondary:active { background: #E7ECF4; } .ds-btn-secondary:focus-visible { outline: 2px solid #2563EB; outline-offset: 2px; }"
+    },
+    {
+      "name": "Shortcut Information Panel",
+      "kind": "card",
+      "description": "A flat tonal strip pairing a reference label with the active global shortcut.",
+      "html": "<div class=\"ds-shortcut-panel\"><span>全局快捷键</span><kbd class=\"ds-shortcut-badge\">Ctrl+Shift+S</kbd></div>",
+      "css": ".ds-shortcut-panel { display: flex; align-items: center; justify-content: space-between; padding: 13px 16px; border-radius: 12px; background: #EEF1F6; color: #172033; font: 400 14px 'Microsoft YaHei UI', 'Microsoft YaHei', sans-serif; } .ds-shortcut-badge { padding: 5px 9px; border: 0; border-radius: 6px; background: #E7EEFF; color: #1746A2; font: 600 14px 'Microsoft YaHei UI', 'Microsoft YaHei', sans-serif; }"
+    },
+    {
+      "name": "OCR Text Editor",
+      "kind": "input",
+      "refersTo": "text-editor",
+      "description": "The flexible plain-text result workspace, focused with recognized text selected on open.",
+      "html": "<textarea class=\"ds-result-editor\">简体中文：屏幕识别\nEnglish: Screen OCR</textarea>",
+      "css": ".ds-result-editor { width: 100%; min-height: 180px; padding: 10px; border: 1px solid #BEC8D8; border-radius: 9px; background: #FFFFFF; color: #101828; font: 400 14px 'Microsoft YaHei UI', 'Microsoft YaHei', sans-serif; resize: vertical; } .ds-result-editor:focus-visible { padding: 9px; border: 2px solid #2563EB; outline: none; } .ds-result-editor::selection { background: #BFDBFE; color: #102A56; }"
+    },
+    {
+      "name": "Tray Menu Item",
+      "kind": "nav",
+      "description": "A concise native-style tray command with blue-wash selection feedback.",
+      "html": "<nav class=\"ds-tray-menu\"><button class=\"ds-tray-item\">开始框选</button><button class=\"ds-tray-item\">设置</button></nav>",
+      "css": ".ds-tray-menu { display: grid; gap: 2px; width: 180px; padding: 5px; border: 1px solid #D2D8E2; background: #FFFFFF; } .ds-tray-item { padding: 8px 28px 8px 12px; border: 0; border-radius: 6px; background: transparent; color: #172033; text-align: left; font: 400 14px 'Microsoft YaHei UI', 'Microsoft YaHei', sans-serif; } .ds-tray-item:hover, .ds-tray-item:focus-visible { background: #E7EEFF; color: #1746A2; outline: none; }"
+    },
+    {
+      "name": "Capture Spotlight",
+      "kind": "custom",
+      "description": "A darkened desktop with a restored selection cutout, light-blue boundary, and live dimensions.",
+      "html": "<div class=\"ds-capture-stage\"><div class=\"ds-capture-selection\"><span class=\"ds-capture-size\">480 × 220</span></div></div>",
+      "css": ".ds-capture-stage { position: relative; width: 100%; min-height: 220px; background: rgba(8, 15, 28, 0.62); } .ds-capture-selection { position: absolute; inset: 54px 48px; border: 2px solid #60A5FA; background: #F7F8FA; } .ds-capture-size { position: absolute; left: -2px; top: -34px; min-width: 116px; padding: 5px 10px; border-radius: 6px; background: rgba(15, 23, 42, 0.92); color: #FFFFFF; text-align: center; font: 400 14px 'Microsoft YaHei UI', 'Microsoft YaHei', sans-serif; }"
+    }
+  ],
+  "narrative": {
+    "northStar": "The Quiet Capture Instrument",
+    "overview": "Screen OCR is a compact, code-led Windows utility whose interface recedes behind a single job: frame text, recognize it locally, and return an editable result. Its visual language is calm and native-adjacent rather than branded or promotional—light neutral ground, dark readable type, compact controls, and one bright blue action channel.\n\nThe working windows remain flat and low-noise. Capture mode deliberately reverses that restraint: a translucent navy scrim turns the desktop into a spotlight surface, while a crisp blue outline identifies the live selection. High-contrast mode is not restyled; the application defers to the Windows system theme so user-selected colors and control treatments remain authoritative.",
+    "keyCharacteristics": [
+      "Compact, task-first Windows utility density.",
+      "Bright blue reserved for capture, confirmation, selection, and keyboard focus.",
+      "Flat neutral surfaces separated by tone and fine borders rather than decoration.",
+      "Microsoft YaHei UI throughout for consistent Chinese and Latin rendering.",
+      "A screen-spotlight overlay that preserves context while isolating the capture region."
+    ],
+    "rules": [
+      { "name": "The One Action Color Rule", "body": "Bright blue communicates capture, copy, selection, or focus; it is not general decoration.", "section": "colors" },
+      { "name": "The System Contrast Rule", "body": "When Windows high-contrast mode is active, omit the custom palette and allow the system theme to render the interface.", "section": "colors" },
+      { "name": "The One Family Rule", "body": "Keep all interface copy in Microsoft YaHei UI; express hierarchy through size, weight, color, and placement.", "section": "typography" },
+      { "name": "The Flat Utility Rule", "body": "Do not add card shadows or floating chrome to ordinary windows; use tone, borders, and spacing to organize the task.", "section": "elevation" }
+    ],
+    "dos": [
+      "Do keep the capture or completion action visually dominant with the established blue hierarchy.",
+      "Do preserve editable original OCR text and the visible recapture path in the result workflow.",
+      "Do use compact native controls, keyboard focus borders, and Escape cancellation.",
+      "Do preserve the screen-spotlight treatment: dark context, restored selection, blue outline, and live dimensions.",
+      "Do defer completely to Windows when high-contrast mode is active.",
+      "Do reserve a clear future location for translation results without adding translation controls or claims before the feature ships."
+    ],
+    "donts": [
+      "Don't introduce decorative gradients, shadows, oversized cards, or multiple accent colors.",
+      "Don't use blue as ambient ornament; it must indicate action, selection, or focus.",
+      "Don't replace Microsoft YaHei UI with a web font or a Latin-first display face.",
+      "Don't reconstruct document layout inside the result editor; the shipped result is editable plain text.",
+      "Don't style over Windows high-contrast preferences.",
+      "Don't present translation, history, sync, or recognition-accuracy claims as current capabilities."
+    ]
+  }
+}

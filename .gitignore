@@ -1,0 +1,10 @@
+.venv/
+.cache/
+__pycache__/
+*.py[cod]
+.pytest_cache/
+build/
+dist/
+models/
+*.egg-info/
+.impeccable/review/
