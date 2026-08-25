@@ -26,8 +26,10 @@ python -m venv .venv
 ## 测试
 
 ```powershell
-.venv\Scripts\python -m pytest
+powershell -ExecutionPolicy Bypass -File scripts\test.ps1
 ```
+
+也可以继续直接运行 `.venv\Scripts\python -m pytest`。测试脚本会使用项目虚拟环境，并在测试失败时返回失败状态。
 
 ## 便携构建
 
@@ -36,6 +38,7 @@ powershell -ExecutionPolicy Bypass -File scripts\build_portable.ps1
 ```
 
 输出位于 `dist\ScreenOCR`。请分发整个目录；不要只复制其中的 exe，否则 Qt 运行库和离线模型会缺失。
+构建前请退出正在从 `dist\ScreenOCR` 运行的旧版本，否则 Windows 会锁定其中的 DLL，构建脚本将以失败状态退出。
 
 ## DeepSeek 翻译
 
