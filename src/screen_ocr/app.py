@@ -9,12 +9,15 @@ import cv2
 import numpy as np
 from PySide6.QtCore import QObject, QThread, QTimer, Signal, Slot
 from PySide6.QtGui import QCursor, QFont, QImage
+from PySide6.QtNetwork import QLocalServer, QLocalSocket
 from PySide6.QtWidgets import QApplication, QMessageBox
 
 from screen_ocr.core.models import AppSettings, CaptureRegion, DisplayResult, ProcessingStatus
 from screen_ocr.core.translation import TextPipeline
+from screen_ocr.services.credentials import WindowsCredentialStore
 from screen_ocr.services.ocr_engine import PaddleOcrEngine
 from screen_ocr.services.settings import SettingsStore, set_start_at_login
+from screen_ocr.services.translation import TranslationService
 from screen_ocr.ui.hotkey import GlobalHotkey
 from screen_ocr.ui.style import APP_STYLE
 from screen_ocr.ui.windows import (
@@ -25,6 +28,76 @@ from screen_ocr.ui.windows import (
     TrayController,
     make_app_icon,
 )
+
+
+SINGLE_INSTANCE_NAME = "PersonalTools.ScreenOCR.SingleInstance"
+_ERROR_ALREADY_EXISTS = 183
+
+
+class SingleInstanceGuard(QObject):
+    activation_requested = Signal()
+
+    def __init__(self, parent=None) -> None:
+        super().__init__(parent)
+        self._server = QLocalServer(self)
+        self._server.newConnection.connect(self._receive_activation)
+        self._mutex_handle = None
+        self._kernel32 = None
+        if sys.platform == "win32":
+            self._kernel32 = ctypes.WinDLL("Kernel32.dll", use_last_error=True)
+            self._kernel32.CreateMutexW.argtypes = [
+                ctypes.c_void_p,
+                ctypes.c_bool,
+                ctypes.c_wchar_p,
+            ]
+            self._kernel32.CreateMutexW.restype = ctypes.c_void_p
+            self._kernel32.CloseHandle.argtypes = [ctypes.c_void_p]
+            self._kernel32.CloseHandle.restype = ctypes.c_bool
+
+    def start_primary(self) -> bool:
+        if self._kernel32 is not None:
+            handle = self._kernel32.CreateMutexW(
+                None, False, f"Local\\{SINGLE_INSTANCE_NAME}.Mutex"
+            )
+            if not handle:
+                return False
+            if ctypes.get_last_error() == _ERROR_ALREADY_EXISTS:
+                self._kernel32.CloseHandle(handle)
+                self.notify_primary()
+                return False
+            self._mutex_handle = handle
+
+        if not self._server.listen(SINGLE_INSTANCE_NAME):
+            QLocalServer.removeServer(SINGLE_INSTANCE_NAME)
+            if not self._server.listen(SINGLE_INSTANCE_NAME):
+                self.close()
+                return False
+        return True
+
+    @staticmethod
+    def notify_primary() -> bool:
+        socket = QLocalSocket()
+        socket.connectToServer(SINGLE_INSTANCE_NAME)
+        if not socket.waitForConnected(500):
+            return False
+        socket.write(b"show")
+        socket.waitForBytesWritten(500)
+        socket.disconnectFromServer()
+        return True
+
+    def _receive_activation(self) -> None:
+        while self._server.hasPendingConnections():
+            socket = self._server.nextPendingConnection()
+            socket.readAll()
+            socket.disconnectFromServer()
+            socket.deleteLater()
+        self.activation_requested.emit()
+
+    def close(self) -> None:
+        self._server.close()
+        if self._mutex_handle is not None and self._kernel32 is not None:
+            self._kernel32.CloseHandle(self._mutex_handle)
+            self._mutex_handle = None
 
 
 class OcrWorker(QObject):
@@ -128,11 +201,13 @@ class ApplicationController(QObject):
         self.store = SettingsStore()
         self.settings = self.store.load()
         self.pipeline = TextPipeline()
+        self.credentials = WindowsCredentialStore()
         self.main = MainWindow(self.settings)
         self.result = ResultDialog(self.main)
         self.presenter = ResultPresenter(app, self.result)
         self.capture = CaptureService(app)
         self.ocr = OcrService()
+        self.translation = TranslationService(self.credentials)
         self.hotkey = GlobalHotkey(app)
         self.tray = TrayController(self.main)
         self._restore_main_after_capture = False
@@ -143,9 +218,11 @@ class ApplicationController(QObject):
         self.main.settings_requested.connect(self.open_settings)
         self.main.quit_requested.connect(self.quit)
         self.result.recapture_requested.connect(self.start_capture)
+        self.result.translation_requested.connect(self._translate)
         self.capture.selected.connect(self._recognize)
         self.capture.cancelled.connect(self._capture_cancelled)
         self.ocr.completed.connect(self._ocr_completed)
+        self.translation.completed.connect(self.result.show_translation)
         self.hotkey.activated.connect(self.start_capture)
         self.hotkey.registration_changed.connect(self._hotkey_status)
         self.tray.show_requested.connect(self.show_main)
@@ -153,6 +230,7 @@ class ApplicationController(QObject):
         self.tray.settings_requested.connect(self.open_settings)
         self.tray.quit_requested.connect(self.quit)
         self.app.aboutToQuit.connect(self.ocr.shutdown)
+        self.app.aboutToQuit.connect(self.translation.shutdown)
 
     def start(self) -> None:
         self.tray.show()
@@ -169,6 +247,7 @@ class ApplicationController(QObject):
         if self.ocr.busy:
             self.tray.notify("正在识别", "请等待本次识别完成")
             return
+        self.translation.invalidate()
         self._restore_main_after_capture = self.main.isVisible()
         self._restore_result_after_capture = self.result.isVisible()
         self.main.hide()
@@ -192,16 +271,27 @@ class ApplicationController(QObject):
 
     @Slot(object)
     def _ocr_completed(self, ocr_result) -> None:
+        self.translation.invalidate()
         display = self.pipeline.without_translation(ocr_result)
         self.main.set_processing(False, "识别完成" if ocr_result.text else "未识别到文字")
         self.presenter.present(display, self.settings)
+        if self.settings.translation.auto_translate and ocr_result.text:
+            self.result.request_translation()
         if ocr_result.status == ProcessingStatus.ERROR:
             self.tray.notify("识别失败", ocr_result.error or "请重试")
         if self._quit_after_ocr:
             QTimer.singleShot(0, self.quit)
 
+    @Slot(str)
+    def _translate(self, text: str) -> None:
+        self.translation.submit(text)
+
     def open_settings(self) -> None:
-        dialog = SettingsDialog(self.settings, self.main)
+        try:
+            has_api_key = bool(self.credentials.get("deepseek"))
+        except OSError:
+            has_api_key = False
+        dialog = SettingsDialog(self.settings, has_api_key, self.main)
         if dialog.exec() != SettingsDialog.DialogCode.Accepted:
             return
         updated = dialog.values(self.settings)
@@ -213,12 +303,30 @@ class ApplicationController(QObject):
         except ValueError as exc:
             QMessageBox.warning(self.main, "快捷键无效", str(exc))
             return
-        if not self.hotkey.register(updated.hotkey):
+        hotkey_changed = updated.hotkey != self.settings.hotkey
+        if hotkey_changed and not self.hotkey.register(updated.hotkey):
             self.hotkey.register(self.settings.hotkey)
             QMessageBox.warning(
                 self.main,
                 "快捷键不可用",
                 "这个快捷键已被其他程序占用。原快捷键仍然有效。",
+            )
+            return
+        api_key, delete_api_key = dialog.api_key_change()
+        try:
+            if delete_api_key:
+                self.credentials.delete("deepseek")
+            elif api_key is not None:
+                self.credentials.set("deepseek", api_key)
+                if self.credentials.get("deepseek") != api_key:
+                    raise OSError("保存后回读校验失败")
+        except (OSError, ValueError) as exc:
+            if hotkey_changed:
+                self.hotkey.register(self.settings.hotkey)
+            QMessageBox.warning(
+                self.main,
+                "无法保存 API Key",
+                f"Windows 凭据管理器返回错误：{exc}",
             )
             return
         if updated.start_at_login != self.settings.start_at_login:
@@ -235,6 +343,7 @@ class ApplicationController(QObject):
         self.settings = updated
         self.store.save(updated)
         self.main.update_shortcut(updated.hotkey)
+        self.main.status_label.setText("设置已保存")
 
     def _hotkey_status(self, ok: bool, message: str) -> None:
         self.main.status_label.setText(message)
@@ -266,7 +375,9 @@ def windows_high_contrast_enabled() -> bool:
     return bool(ok and value.dwFlags & 0x00000001)
 
 
-def create_application(argv: list[str] | None = None) -> tuple[QApplication, ApplicationController]:
+def create_application(
+    argv: list[str] | None = None,
+) -> tuple[QApplication, ApplicationController | None]:
     app = QApplication(argv or sys.argv)
     app.setApplicationName("屏幕文字识别")
     app.setOrganizationName("PersonalTools")
@@ -276,7 +387,13 @@ def create_application(argv: list[str] | None = None) -> tuple[QApplication, App
     if not windows_high_contrast_enabled():
         app.setStyle("Fusion")
         app.setStyleSheet(APP_STYLE)
+    single_instance = SingleInstanceGuard(app)
+    if not single_instance.start_primary():
+        return app, None
     controller = ApplicationController(app)
+    single_instance.activation_requested.connect(controller.show_main)
+    app.aboutToQuit.connect(single_instance.close)
+    controller.single_instance = single_instance
     return app, controller
 
 
@@ -320,5 +437,7 @@ def run() -> int:
             return 2
         return run_ocr_diagnostic(output_path)
     app, controller = create_application()
+    if controller is None:
+        return 0
     controller.start()
     return app.exec()

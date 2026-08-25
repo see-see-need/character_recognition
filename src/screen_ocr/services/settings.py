@@ -22,8 +22,13 @@ class SettingsStore:
             auto_copy=self._as_bool(self._settings.value("result/auto_copy", True)),
             start_at_login=self._as_bool(self._settings.value("startup/enabled", False)),
             translation=TranslationSettings(
-                enabled=self._as_bool(self._settings.value("translation/enabled", False)),
-                provider=str(self._settings.value("translation/provider", "")),
+                auto_translate=self._as_bool(
+                    self._settings.value(
+                        "translation/auto_translate",
+                        self._settings.value("translation/enabled", False),
+                    )
+                ),
+                provider="deepseek",
                 target_language=str(
                     self._settings.value("translation/target_language", "zh-Hans")
                 ),
@@ -34,8 +39,11 @@ class SettingsStore:
         self._settings.setValue("capture/hotkey", value.hotkey)
         self._settings.setValue("result/auto_copy", value.auto_copy)
         self._settings.setValue("startup/enabled", value.start_at_login)
-        self._settings.setValue("translation/enabled", value.translation.enabled)
-        self._settings.setValue("translation/provider", value.translation.provider)
+        self._settings.setValue(
+            "translation/auto_translate", value.translation.auto_translate
+        )
+        self._settings.remove("translation/enabled")
+        self._settings.remove("translation/provider")
         self._settings.setValue(
             "translation/target_language", value.translation.target_language
         )
@@ -68,4 +76,3 @@ def set_start_at_login(enabled: bool) -> None:
                 winreg.DeleteValue(key, APPLICATION)
             except FileNotFoundError:
                 pass
-

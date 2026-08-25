@@ -26,9 +26,8 @@ class FailingProvider:
         return TranslationResult(None, provider=self.name, error="service unavailable")
 
 
-@pytest.mark.asyncio
-async def test_disabled_translation_passes_through() -> None:
-    result = await TextPipeline().process(OcrResult("Hello"), TranslationSettings())
+def test_without_translation_passes_through() -> None:
+    result = TextPipeline.without_translation(OcrResult("Hello"))
     assert result.original_text == "Hello"
     assert result.translated_text is None
 
@@ -37,7 +36,7 @@ async def test_disabled_translation_passes_through() -> None:
 async def test_provider_can_be_inserted() -> None:
     pipeline = TextPipeline({"fake": FakeProvider()})
     result = await pipeline.process(
-        OcrResult("Hello"), TranslationSettings(True, "fake", "zh-Hans")
+        OcrResult("Hello"), TranslationSettings(False, "fake", "zh-Hans")
     )
     assert result.original_text == "Hello"
     assert result.translated_text == "你好"
@@ -47,10 +46,9 @@ async def test_provider_can_be_inserted() -> None:
 async def test_translation_failure_keeps_original() -> None:
     pipeline = TextPipeline({"fail": FailingProvider()})
     result = await pipeline.process(
-        OcrResult("Hello"), TranslationSettings(True, "fail", "zh-Hans")
+        OcrResult("Hello"), TranslationSettings(False, "fail", "zh-Hans")
     )
     assert result.status == ProcessingStatus.SUCCESS
     assert result.original_text == "Hello"
     assert result.translated_text is None
     assert result.error == "service unavailable"
-

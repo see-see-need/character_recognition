@@ -47,6 +47,7 @@ class GlobalHotkey(QObject):
         super().__init__()
         self._app = app
         self._registered = False
+        self._registered_sequence = ""
         self._filter = NativeHotkeyFilter(self.activated.emit)
         app.installNativeEventFilter(self._filter)
 
@@ -78,6 +79,12 @@ class GlobalHotkey(QObject):
         return native_modifiers, virtual_key
 
     def register(self, sequence_text: str) -> bool:
+        normalized = QKeySequence(sequence_text).toString(
+            QKeySequence.SequenceFormat.PortableText
+        )
+        if self._registered and normalized == self._registered_sequence:
+            self.registration_changed.emit(True, "快捷键可用")
+            return True
         self.unregister()
         if sys.platform != "win32":
             self.registration_changed.emit(False, "全局快捷键仅支持 Windows")
@@ -89,6 +96,7 @@ class GlobalHotkey(QObject):
             return False
         ok = bool(ctypes.windll.user32.RegisterHotKey(None, HOTKEY_ID, modifiers, virtual_key))
         self._registered = ok
+        self._registered_sequence = normalized if ok else ""
         message = "快捷键可用" if ok else "快捷键已被其他程序占用，请更换"
         self.registration_changed.emit(ok, message)
         return ok
@@ -97,3 +105,4 @@ class GlobalHotkey(QObject):
         if self._registered and sys.platform == "win32":
             ctypes.windll.user32.UnregisterHotKey(None, HOTKEY_ID)
         self._registered = False
+        self._registered_sequence = ""

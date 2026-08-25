@@ -83,8 +83,16 @@ class DisplayResult:
 
 @dataclass(frozen=True, slots=True)
 class TranslationSettings:
-    enabled: bool = False
-    provider: str = ""
+    auto_translate: bool = False
+    provider: str = "deepseek"
+    target_language: str = "zh-Hans"
+
+
+@dataclass(frozen=True, slots=True)
+class TranslationJob:
+    job_id: int
+    text: str
+    source_language: str = "auto"
     target_language: str = "zh-Hans"
 
 
@@ -103,4 +111,3 @@ def logical_to_pixel_rect(rect: Rect, device_pixel_ratio: float) -> Rect:
     right = round(rect.right * device_pixel_ratio)
     bottom = round(rect.bottom * device_pixel_ratio)
     return Rect(left, top, max(0, right - left), max(0, bottom - top))
-

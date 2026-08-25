@@ -12,8 +12,13 @@ colors:
   text-strong: "#101828"
   text-body: "#172033"
   text-muted: "#536078"
+  text-status: "#344054"
+  action-blue-ink: "#1746A2"
   border: "#C9D1DF"
+  border-hover: "#AAB6C8"
+  border-input: "#BEC8D8"
   error: "#B42318"
+  success: "#18794E"
   selection-fill: "#BFDBFE"
   selection-text: "#102A56"
   capture-scrim: "rgba(8, 15, 28, 0.62)"
@@ -152,7 +157,7 @@ The palette pairs cool, nearly white surfaces with ink-like navy text and a focu
 
 The application uses single-column native Qt layouts and fixed working-window proportions instead of a responsive web grid. The main window opens at 520 × 360 pixels with a 460 × 330 minimum, 32-pixel side margins, and an 18-pixel vertical rhythm. Its full-width 52-pixel capture button is the dominant control; shortcut and status information follow in reading order, while Settings settles at the lower-right edge.
 
-The result dialog opens at 620 × 430 pixels with 24-pixel side margins and a 14-pixel rhythm. The editable text area absorbs available height. Recapture stays left as the alternate path; Close and the blue Copy action align right. The settings dialog uses a compact 420-pixel minimum width, 24-pixel margins, and the same 14-pixel rhythm.
+The result dialog opens at 680 × 620 pixels with 24-pixel side margins and a 14-pixel rhythm. The editable original text area absorbs available height until translation is requested; then a separate editable Simplified Chinese area appears below it. Recapture and Translate stay left as alternate paths; Close and the blue Copy action align right. The settings dialog uses a compact 420-pixel minimum width, 24-pixel margins, and the same 14-pixel rhythm.
 
 Capture is bound to one display at a time. Its overlay fills that display, uses the crosshair cursor, and updates the selected rectangle continuously; Escape cancels. Windows display scaling is handled by translating the logical selection into screenshot pixels.
 
@@ -201,14 +206,15 @@ The overlay is a frameless, always-on-top, full-display tool surface. A transluc
 
 ### Result Workspace
 
-The result dialog combines a title, one-line status or timing metadata, a flexible plain-text editor, and a three-action footer. Recognized text is selected and focused when the dialog opens. Recapture preserves the workflow escape hatch, Copy is the primary completion action, and Close remains secondary. The structure leaves room for a future translation result affordance, but the shipped interface does not display or imply translated output.
+The result dialog combines a title, one-line OCR metadata, a flexible original-text editor, and a compact action footer. Recognized text is selected and focused when the dialog opens. Translation is progressive disclosure: the lower translation workspace remains absent in manual mode until requested, then shows a contained loading, success, or recoverable error state. Its editor is independently editable and copyable. Automatic mode opens the same workspace immediately, while the action becomes “Translate again” after completion. Recapture preserves the workflow escape hatch, original Copy remains the primary completion action, and Close remains secondary.
 
 ## Do's and Don'ts
 
 ### Do:
 
 - **Do** keep the capture or completion action visually dominant with the established blue hierarchy.
-- **Do** preserve editable original OCR text and the visible recapture path in the result workflow.
+- **Do** preserve editable original OCR text and the visible recapture path even when translation is loading or fails.
+- **Do** keep translation visually subordinate to the original and disclose when recognized text is sent online.
 - **Do** use compact native controls, keyboard focus borders, and Escape cancellation.
 - **Do** preserve the screen-spotlight treatment: dark context, restored selection, blue outline, and live dimensions.
 - **Do** defer completely to Windows when high-contrast mode is active.
@@ -221,4 +227,4 @@ The result dialog combines a title, one-line status or timing metadata, a flexib
 - **Don't** replace Microsoft YaHei UI with a web font or a Latin-first display face.
 - **Don't** reconstruct document layout inside the result editor; the shipped result is editable plain text.
 - **Don't** style over Windows high-contrast preferences.
-- **Don't** present translation, history, sync, or recognition-accuracy claims as current capabilities.
+- **Don't** imply that screenshots are sent to DeepSeek or claim universal translation accuracy.

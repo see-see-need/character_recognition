@@ -31,12 +31,12 @@ class NullTranslationProvider:
 
 
 class TextPipeline:
-    """Provider-neutral post-OCR pipeline; translation is disabled in v1."""
+    """Provider-neutral post-OCR translation pipeline."""
 
     def __init__(self, providers: dict[str, TranslationProvider] | None = None) -> None:
         self._providers = providers or {}
 
-    async def process(
+    async def translate(
         self,
         ocr: OcrResult,
         settings: TranslationSettings,
@@ -49,8 +49,6 @@ class TextPipeline:
                 error=ocr.error,
                 ocr_elapsed_ms=ocr.elapsed_ms,
             )
-        if not settings.enabled:
-            return self.without_translation(ocr)
         provider = self._providers.get(settings.provider)
         if provider is None:
             return DisplayResult(
@@ -74,6 +72,15 @@ class TextPipeline:
             translation_elapsed_ms=result.elapsed_ms,
         )
 
+    async def process(
+        self,
+        ocr: OcrResult,
+        settings: TranslationSettings,
+        cancel_event: asyncio.Event | None = None,
+    ) -> DisplayResult:
+        """Backward-compatible alias for callers that explicitly request translation."""
+        return await self.translate(ocr, settings, cancel_event)
+
     @staticmethod
     def without_translation(ocr: OcrResult) -> DisplayResult:
         return DisplayResult(
@@ -82,4 +89,3 @@ class TextPipeline:
             error=ocr.error,
             ocr_elapsed_ms=ocr.elapsed_ms,
         )
-

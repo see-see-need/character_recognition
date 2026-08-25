@@ -27,6 +27,7 @@ metadata_distributions = (
     "modelscope",
     "numpy",
     "opencv-contrib-python",
+    "openai",
     "packaging",
     "pandas",
     "pillow",

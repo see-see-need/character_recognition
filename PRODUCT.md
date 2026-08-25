@@ -16,11 +16,11 @@ The primary user is the owner of the application, using it personally on a Windo
 
 ## Product Purpose
 
-Capture a user-drawn region of the current display, recognize its text locally, copy it to the clipboard, and make it available for quick correction. Success means the workflow is reachable globally, does not upload screenshots, and remains usable across common Windows display scales.
+Capture a user-drawn region of the current display, recognize its text locally, copy it to the clipboard, make it available for quick correction, and optionally translate the corrected text to Simplified Chinese. Success means the workflow is reachable globally, never uploads screenshots, and remains usable across common Windows display scales.
 
 ## Positioning
 
-The tool combines a low-friction Windows screen-selection workflow with offline OCR for Simplified Chinese, Traditional Chinese, English, Japanese, and Korean, while keeping translation as a provider-neutral future pipeline stage.
+The tool combines a low-friction Windows screen-selection workflow with offline OCR for Simplified Chinese, Traditional Chinese, English, Japanese, and Korean, plus an optional DeepSeek-backed Simplified Chinese translation stage.
 
 ## Operating Context
 
@@ -32,8 +32,8 @@ The application runs as a Windows tray utility. The user starts capture from Ctr
 - Offline OCR and in-memory screenshots only.
 - Global hotkey, system tray, optional per-user login startup, configurable automatic copy.
 - Plain-text reading order rather than layout reconstruction.
-- Translation, history, cloud sync, tables, specialist handwriting, and cross-display selections are outside v1.
-- Future translation targets Simplified Chinese (`zh-Hans`) through an asynchronous provider interface.
+- Translation targets Simplified Chinese (`zh-Hans`) through an asynchronous provider interface; only recognized text is sent to DeepSeek.
+- Translation can be manual or automatic, while history, cloud sync, tables, specialist handwriting, and cross-display selections remain outside scope.
 
 ## Evidence on Hand
 
@@ -43,7 +43,7 @@ No brand assets, benchmark corpus, or external claims were supplied. The applica
 
 - Capture should feel immediate from any application.
 - Private screen content stays on the machine.
-- Original OCR text remains available even when later pipeline stages fail.
+- Original OCR text remains available and editable even when translation fails.
 - Failure states explain what can be retried or changed.
 - Future translation providers must not couple to capture or OCR UI code.
 
