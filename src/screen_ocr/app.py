@@ -12,12 +12,14 @@ from PySide6.QtGui import QCursor, QFont, QImage
 from PySide6.QtNetwork import QLocalServer, QLocalSocket
 from PySide6.QtWidgets import QApplication, QMessageBox
 
-from screen_ocr.core.models import AppSettings, CaptureRegion, DisplayResult, ProcessingStatus
+from screen_ocr.core.models import AppSettings, CaptureRegion, DisplayResult, ProcessingStatus, OcrResult
 from screen_ocr.core.translation import TextPipeline
 from screen_ocr.services.credentials import WindowsCredentialStore
 from screen_ocr.services.ocr_engine import PaddleOcrEngine
 from screen_ocr.services.settings import SettingsStore, set_start_at_login
 from screen_ocr.services.translation import TranslationService
+from screen_ocr.services.live import LiveController
+from screen_ocr.ui.live import LiveWindows
 from screen_ocr.ui.hotkey import GlobalHotkey
 from screen_ocr.ui.style import APP_STYLE
 from screen_ocr.ui.windows import (
@@ -109,13 +111,17 @@ class OcrWorker(QObject):
 
     @Slot(object)
     def recognize(self, region: CaptureRegion) -> None:
-        image = region.image.convertToFormat(QImage.Format.Format_RGBA8888)
-        buffer = image.constBits()
-        rgba = np.frombuffer(buffer, dtype=np.uint8, count=image.sizeInBytes()).reshape(
-            image.height(), image.width(), 4
-        )
-        bgr = cv2.cvtColor(rgba, cv2.COLOR_RGBA2BGR)
-        self.completed.emit(self._engine.recognize(bgr))
+        try:
+            image = region.image.convertToFormat(QImage.Format.Format_RGBA8888)
+            buffer = image.constBits()
+            rgba = np.frombuffer(buffer, dtype=np.uint8, count=image.sizeInBytes()).reshape(
+                image.height(), image.width(), 4
+            )
+            bgr = cv2.cvtColor(rgba, cv2.COLOR_RGBA2BGR)
+            result = self._engine.recognize(bgr)
+        except Exception:
+            result = OcrResult("", status=ProcessingStatus.ERROR, error="无法识别此画面，请重试")
+        self.completed.emit(result)
 
 
 class OcrService(QObject):
@@ -208,6 +214,11 @@ class ApplicationController(QObject):
         self.capture = CaptureService(app)
         self.ocr = OcrService()
         self.translation = TranslationService(self.credentials)
+        self.live_translation = TranslationService(self.credentials)
+        self.live_windows = LiveWindows()
+        self.live = LiveController(app, self.ocr, self.live_translation, self.live_windows)
+        self._capture_mode = None
+        self._pending_normal = None
         self.hotkey = GlobalHotkey(app)
         self.tray = TrayController(self.main)
         self._restore_main_after_capture = False
@@ -215,6 +226,10 @@ class ApplicationController(QObject):
         self._quit_after_ocr = False
 
         self.main.capture_requested.connect(self.start_capture)
+        self.main.live_requested.connect(self.start_live)
+        self.live_windows.recapture_requested.connect(self.start_live)
+        self.live_windows.stop_requested.connect(self.live.stop)
+        self.live.stopped.connect(self._live_stopped)
         self.main.settings_requested.connect(self.open_settings)
         self.main.quit_requested.connect(self.quit)
         self.result.recapture_requested.connect(self.start_capture)
@@ -227,10 +242,14 @@ class ApplicationController(QObject):
         self.hotkey.registration_changed.connect(self._hotkey_status)
         self.tray.show_requested.connect(self.show_main)
         self.tray.capture_requested.connect(self.start_capture)
+        self.tray.live_requested.connect(self.start_live)
+        self.tray.stop_live_requested.connect(self.live.stop)
         self.tray.settings_requested.connect(self.open_settings)
         self.tray.quit_requested.connect(self.quit)
         self.app.aboutToQuit.connect(self.ocr.shutdown)
         self.app.aboutToQuit.connect(self.translation.shutdown)
+        self.app.aboutToQuit.connect(self.live.stop)
+        self.app.aboutToQuit.connect(self.live_translation.shutdown)
 
     def start(self) -> None:
         self.tray.show()
@@ -244,9 +263,22 @@ class ApplicationController(QObject):
 
     @Slot()
     def start_capture(self) -> None:
-        if self.ocr.busy:
+        self._begin_capture("normal")
+
+    def start_live(self) -> None:
+        self._begin_capture("live")
+
+    def _begin_capture(self, mode) -> None:
+        if self._capture_mode is not None:
+            return
+        if self.ocr.busy and self.live.inflight is None:
             self.tray.notify("正在识别", "请等待本次识别完成")
             return
+        if mode == "normal":
+            self.live.stop()
+        else:
+            self.live.pause()
+        self._capture_mode = mode
         self.translation.invalidate()
         self._restore_main_after_capture = self.main.isVisible()
         self._restore_result_after_capture = self.result.isVisible()
@@ -256,12 +288,24 @@ class ApplicationController(QObject):
 
     @Slot(object)
     def _recognize(self, region: CaptureRegion) -> None:
+        mode = self._capture_mode
+        self._capture_mode = None
+        if mode == "live":
+            self.live.start(region)
+            if self.live.active:
+                self.main.set_processing(False, "正在持续翻译，可在悬浮工具条或托盘停止")
+            return
         self.main.set_processing(True, "正在本机识别，首次使用需要加载模型…")
         self.show_main()
         if not self.ocr.submit(region):
-            self.main.set_processing(False, "已有识别任务正在运行")
+            self._pending_normal = region
 
     def _capture_cancelled(self) -> None:
+        mode = self._capture_mode
+        self._capture_mode = None
+        if mode == "live" and self.live.active:
+            self.live.resume()
+            return
         self.main.set_processing(False, "已取消框选")
         if self._restore_main_after_capture:
             self.show_main()
@@ -271,6 +315,13 @@ class ApplicationController(QObject):
 
     @Slot(object)
     def _ocr_completed(self, ocr_result) -> None:
+        if self.live.ocr_completed(ocr_result):
+            if self._pending_normal is not None:
+                region, self._pending_normal = self._pending_normal, None
+                self.ocr.submit(region)
+            if self._quit_after_ocr:
+                QTimer.singleShot(0, self.quit)
+            return
         self.translation.invalidate()
         display = self.pipeline.without_translation(ocr_result)
         self.main.set_processing(False, "识别完成" if ocr_result.text else "未识别到文字")
@@ -344,11 +395,19 @@ class ApplicationController(QObject):
         self.store.save(updated)
         self.main.update_shortcut(updated.hotkey)
         self.main.status_label.setText("设置已保存")
+        self.live.settings_updated()
 
     def _hotkey_status(self, ok: bool, message: str) -> None:
         self.main.status_label.setText(message)
 
+    def _live_stopped(self, message: str) -> None:
+        self.main.status_label.setText(message)
+        if "重新框选" in message:
+            self.tray.notify("持续翻译已停止", message)
+
     def quit(self) -> None:
+        self.live.stop()
+        self._pending_normal = None
         if self.ocr.busy:
             self._quit_after_ocr = True
             self.main.status_label.setText("识别完成后将自动退出")

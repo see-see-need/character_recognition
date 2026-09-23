@@ -155,11 +155,13 @@ The palette pairs cool, nearly white surfaces with ink-like navy text and a focu
 
 ## Layout
 
-The application uses single-column native Qt layouts and fixed working-window proportions instead of a responsive web grid. The main window opens at 520 × 360 pixels with a 460 × 330 minimum, 32-pixel side margins, and an 18-pixel vertical rhythm. Its full-width 52-pixel capture button is the dominant control; shortcut and status information follow in reading order, while Settings settles at the lower-right edge.
+The application uses single-column native Qt layouts and fixed working-window proportions instead of a responsive web grid. The main window opens at 520 × 450 pixels with a 460 × 420 minimum, 32-pixel side margins, and an 18-pixel vertical rhythm. Its full-width 52-pixel capture button is the dominant control; a separate secondary continuous-translation button has a 44-pixel minimum height. Shortcut and status information follow in reading order, while Settings settles at the lower-right edge.
 
 The result dialog opens at 680 × 620 pixels with 24-pixel side margins and a 14-pixel rhythm. The editable original text area absorbs available height until translation is requested; then a separate editable Simplified Chinese area appears below it. Recapture and Translate stay left as alternate paths; Close and the blue Copy action align right. The settings dialog uses a compact 420-pixel minimum width, 24-pixel margins, and the same 14-pixel rhythm.
 
 Capture is bound to one display at a time. Its overlay fills that display, uses the crosshair cursor, and updates the selected rectangle continuously; Escape cancels. Windows display scaling is handled by translating the logical selection into screenshot pixels.
+
+Continuous translation retains the selected region at fixed screen coordinates. The translation prefers a position above it with an 8-pixel gap, falls below when the upper space is insufficient, and is clamped to the display's available bounds. Its width follows the region with a 320-pixel minimum, bounded by the display width. Its height fits short content with a 44-pixel minimum; the maximum is one-third of available display height, constrained to 72–184 pixels. Longer content is paginated rather than enlarging the overlay indefinitely. The separate toolbar sits beyond the translation with a 4-pixel gap where space permits, also constrained to available bounds.
 
 ## Elevation & Depth
 
@@ -198,7 +200,7 @@ Controls use gently rounded 9-pixel corners, compact badges and menu items use 6
 
 ### Menus
 
-Tray menus use the white surface, a fine cool border, and compact 6-pixel item corners. Selection uses the same pale blue and blue-ink treatment as the shortcut badge. The information architecture stays native and concise: open, capture, settings, and quit.
+Tray menus use the white surface, a fine cool border, and compact 6-pixel item corners. Selection uses the same pale blue and blue-ink treatment as the shortcut badge. The information architecture stays native and concise: open, ordinary capture, continuous translation, stop continuous translation, settings, and quit.
 
 ### Capture Overlay
 
@@ -207,6 +209,14 @@ The overlay is a frameless, always-on-top, full-display tool surface. A transluc
 ### Result Workspace
 
 The result dialog combines a title, one-line OCR metadata, a flexible original-text editor, and a compact action footer. Recognized text is selected and focused when the dialog opens. Translation is progressive disclosure: the lower translation workspace remains absent in manual mode until requested, then shows a contained loading, success, or recoverable error state. Its editor is independently editable and copyable. Automatic mode opens the same workspace immediately, while the action becomes “Translate again” after completion. Recapture preserves the workflow escape hatch, original Copy remains the primary completion action, and Close remains secondary.
+
+### Continuous Translation Overlay
+
+This mode uses three separate frameless, always-on-top windows: the region frame, translation text, and interactive toolbar. The frame uses the existing light-blue two-pixel capture outline, with no fill or desktop scrim. Translation is white Microsoft YaHei UI text (18px) on a transparent background, drawn with a dark rounded outline (#111827, 3px), a 28-pixel line rhythm, and 8-pixel horizontal inset. Preserve the original screen content beneath and keep short translations close to the region through content-fitting height.
+
+The frame and translation windows are configured to pass mouse input through and avoid taking focus. Only the separate toolbar accepts interaction: previous page, current/total page count, next page, recapture, and stop. Unavailable page directions are disabled; new text resets to the first page. Loading and recoverable-error copy use the same outlined text surface. Continuous mode has no source or translation editor and no automatic copy action; the ordinary result workspace retains its existing behavior.
+
+This is an implementation contract backed by offscreen layout and legibility review only. Native click-through, focus, DPI behavior, and exclusion from subsequent captures remain unverified; no detector ran the native Python application. The custom-painted overlay also requires native high-contrast verification before claiming the system-theme rule covers it.
 
 ## Do's and Don'ts
 

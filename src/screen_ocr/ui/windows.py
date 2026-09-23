@@ -50,6 +50,7 @@ def make_app_icon() -> QIcon:
 
 class MainWindow(QMainWindow):
     capture_requested = Signal()
+    live_requested = Signal()
     settings_requested = Signal()
     quit_requested = Signal()
 
@@ -58,8 +59,8 @@ class MainWindow(QMainWindow):
         self._allow_close = False
         self.setWindowTitle("屏幕文字识别")
         self.setWindowIcon(make_app_icon())
-        self.setMinimumSize(460, 330)
-        self.resize(520, 360)
+        self.setMinimumSize(460, 420)
+        self.resize(520, 450)
 
         body = QWidget()
         layout = QVBoxLayout(body)
@@ -76,6 +77,9 @@ class MainWindow(QMainWindow):
         self.capture_button.setObjectName("primaryButton")
         self.capture_button.setMinimumHeight(52)
         self.capture_button.clicked.connect(self.capture_requested)
+        self.live_button = QPushButton("持续翻译")
+        self.live_button.setMinimumHeight(44)
+        self.live_button.clicked.connect(self.live_requested)
 
         shortcut_frame = QFrame()
         shortcut_frame.setObjectName("infoPanel")
@@ -99,6 +103,7 @@ class MainWindow(QMainWindow):
         layout.addWidget(subtitle)
         layout.addSpacing(4)
         layout.addWidget(self.capture_button)
+        layout.addWidget(self.live_button)
         layout.addWidget(shortcut_frame)
         layout.addWidget(self.status_label)
         layout.addStretch()
@@ -107,6 +112,7 @@ class MainWindow(QMainWindow):
 
     def set_processing(self, processing: bool, message: str) -> None:
         self.capture_button.setDisabled(processing)
+        self.live_button.setDisabled(processing)
         self.capture_button.setText("正在识别…" if processing else "开始框选")
         self.status_label.setText(message)
 
@@ -499,6 +505,8 @@ class CaptureOverlay(QWidget):
 class TrayController(QObject):
     show_requested = Signal()
     capture_requested = Signal()
+    live_requested = Signal()
+    stop_live_requested = Signal()
     settings_requested = Signal()
     quit_requested = Signal()
 
@@ -508,11 +516,15 @@ class TrayController(QObject):
         menu = QMenu()
         show_action = menu.addAction("打开屏幕文字识别")
         capture_action = menu.addAction("开始框选")
+        live_action = menu.addAction("持续翻译")
+        stop_live_action = menu.addAction("停止持续翻译")
         menu.addSeparator()
         settings_action = menu.addAction("设置")
         quit_action = menu.addAction("退出")
         show_action.triggered.connect(self.show_requested)
         capture_action.triggered.connect(self.capture_requested)
+        live_action.triggered.connect(self.live_requested)
+        stop_live_action.triggered.connect(self.stop_live_requested)
         settings_action.triggered.connect(self.settings_requested)
         quit_action.triggered.connect(self.quit_requested)
         self.tray.setContextMenu(menu)

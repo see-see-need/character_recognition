@@ -1,4 +1,6 @@
 import asyncio
+import threading
+import time
 
 from PySide6.QtCore import QCoreApplication
 
@@ -57,3 +59,54 @@ def test_service_ignores_stale_results() -> None:
     assert received == [result]
     service.shutdown()
     assert app is not None
+
+
+def test_new_request_cancels_inflight_network_wait():
+    started = threading.Event()
+    cancelled = threading.Event()
+
+    class BlockingProvider:
+        async def translate(self, request, cancel_event):
+            if request.text == "old":
+                started.set()
+                try:
+                    await asyncio.sleep(60)
+                except asyncio.CancelledError:
+                    cancelled.set()
+                    raise
+            return TranslationResult("new result")
+
+    service = TranslationService(MemoryCredentials("secret"), lambda key: BlockingProvider())
+    received = []
+    service.completed.connect(received.append)
+    try:
+        service.submit("old")
+        assert started.wait(2)
+        service.submit("new")
+        assert cancelled.wait(2)
+        deadline = time.monotonic() + 2
+        while not received and time.monotonic() < deadline:
+            QCoreApplication.processEvents()
+            time.sleep(.005)
+        assert [r.text for r in received] == ["new result"]
+    finally:
+        service.shutdown()
+
+
+def test_shutdown_cancels_active_request_without_waiting_for_timeout():
+    started = threading.Event()
+    cancelled = threading.Event()
+
+    class BlockingProvider:
+        async def translate(self, request, cancel_event):
+            started.set()
+            try:
+                await asyncio.sleep(60)
+            finally:
+                cancelled.set()
+
+    service = TranslationService(MemoryCredentials("secret"), lambda key: BlockingProvider())
+    service.submit("old")
+    assert started.wait(2)
+    service.shutdown()
+    assert cancelled.is_set()

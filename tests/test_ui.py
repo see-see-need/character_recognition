@@ -89,4 +89,4 @@ def test_tray_controller_builds_expected_menu() -> None:
     get_app()
     tray = TrayController()
     labels = [action.text() for action in tray.tray.contextMenu().actions() if action.text()]
-    assert labels == ["打开屏幕文字识别", "开始框选", "设置", "退出"]
+    assert labels == ["打开屏幕文字识别", "开始框选", "持续翻译", "停止持续翻译", "设置", "退出"]
