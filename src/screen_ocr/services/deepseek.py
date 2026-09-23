@@ -19,6 +19,7 @@ from screen_ocr.core.models import TranslationRequest, TranslationResult
 
 DEEPSEEK_BASE_URL = "https://api.deepseek.com"
 DEEPSEEK_MODEL = "deepseek-v4-flash"
+DEEPSEEK_MAX_ATTEMPTS = 10
 
 SYSTEM_PROMPT = """你是一个严格的翻译引擎。把用户提供的全部文本翻译为简体中文。
 规则：
@@ -58,7 +59,8 @@ class DeepSeekTranslationProvider:
                     api_key=self._api_key,
                     base_url=DEEPSEEK_BASE_URL,
                     timeout=self._timeout_seconds,
-                    max_retries=1,
+                    # The SDK counts retries after the initial request.
+                    max_retries=DEEPSEEK_MAX_ATTEMPTS - 1,
                 )
             response = await client.chat.completions.create(
                 model=DEEPSEEK_MODEL,

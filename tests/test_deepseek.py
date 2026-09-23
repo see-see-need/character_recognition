@@ -6,11 +6,13 @@ import pytest
 from openai import (
     APIConnectionError,
     APITimeoutError,
+    AsyncOpenAI,
     AuthenticationError,
     RateLimitError,
 )
 
 from screen_ocr.core.models import TranslationRequest
+from screen_ocr.services import deepseek
 from screen_ocr.services.deepseek import (
     DEEPSEEK_MODEL,
     SYSTEM_PROMPT,
@@ -105,3 +107,71 @@ async def test_deepseek_maps_common_errors(error_factory, message) -> None:
     result = await provider.translate(TranslationRequest("Hello"), asyncio.Event())
     assert result.text is None
     assert message in result.error
+
+
+@pytest.mark.asyncio
+@pytest.mark.parametrize("failure", ["connection", "timeout", 408, 409, 429, 500, 503])
+@pytest.mark.parametrize("recover", [True, False])
+async def test_network_retries_stop_at_tenth_attempt(monkeypatch, failure, recover):
+    calls = []
+    clients = []
+
+    def handle(request):
+        calls.append(request)
+        if recover and len(calls) == 10:
+            return httpx.Response(200, json={
+                "id": "translation", "object": "chat.completion", "created": 0,
+                "model": DEEPSEEK_MODEL,
+                "choices": [{"index": 0, "finish_reason": "stop",
+                             "message": {"role": "assistant", "content": "你好"}}],
+            })
+        if failure == "connection":
+            raise httpx.ConnectError("offline", request=request)
+        if failure == "timeout":
+            raise httpx.ReadTimeout("timed out", request=request)
+        return httpx.Response(failure, json={"error": {"message": "temporary error"}})
+
+    def make_client(**kwargs):
+        client = AsyncOpenAI(
+            **kwargs, http_client=httpx.AsyncClient(transport=httpx.MockTransport(handle))
+        )
+        clients.append(client)
+        return client
+
+    monkeypatch.setattr(deepseek, "AsyncOpenAI", make_client)
+    # Exercise the real SDK retry loop without waiting through its backoff.
+    monkeypatch.setattr(AsyncOpenAI, "_calculate_retry_timeout", lambda *a, **kw: 0)
+    result = await DeepSeekTranslationProvider("secret").translate(
+        TranslationRequest("Hello"), asyncio.Event()
+    )
+    assert len(calls) == 10
+    assert result.text == ("你好" if recover else None)
+    assert bool(result.error) is not recover
+    assert clients[0].is_closed()
+
+
+@pytest.mark.asyncio
+@pytest.mark.parametrize("status", [200, 400, 401, 402, 403])
+async def test_success_and_permanent_errors_do_not_retry(monkeypatch, status):
+    calls = []
+
+    def handle(request):
+        calls.append(request)
+        if status == 200:
+            return httpx.Response(200, json={
+                "id": "translation", "object": "chat.completion", "created": 0,
+                "model": DEEPSEEK_MODEL,
+                "choices": [{"index": 0, "finish_reason": "stop",
+                             "message": {"role": "assistant", "content": "你好"}}],
+            })
+        return httpx.Response(status, json={"error": {"message": "invalid request"}})
+
+    monkeypatch.setattr(deepseek, "AsyncOpenAI", lambda **kwargs: AsyncOpenAI(
+        **kwargs, http_client=httpx.AsyncClient(transport=httpx.MockTransport(handle))
+    ))
+    result = await DeepSeekTranslationProvider("secret").translate(
+        TranslationRequest("Hello"), asyncio.Event()
+    )
+    assert len(calls) == 1
+    assert result.text == ("你好" if status == 200 else None)
+    assert bool(result.error) == (status != 200)
