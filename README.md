@@ -2,8 +2,7 @@
 
 一款面向 Windows 的屏幕 OCR 工具。按 `Ctrl+Shift+S` 或点击“开始框选”，用鼠标左键拖出区域，松开后在本机识别文字并自动复制。
 
-自用项目，安装包在 `dist/installer` 目录下。
-
+本人小白，自用项目，全ai
 ## 功能
 
 - 简体中文、繁体中文、英文、日文和韩文自动识别
@@ -51,6 +50,12 @@ powershell -ExecutionPolicy Bypass -File scripts\test.ps1
 也可以继续直接运行 `.venv\Scripts\python -m pytest`。测试脚本会使用项目虚拟环境，并在测试失败时返回失败状态。
 
 ## 便携构建
+
+### GitHub 源码压缩包无法直接启动时
+
+从 GitHub 的代码页下载 ZIP，得到的是源码，不是完整的 Windows 发行包。仓库中的 `dist/ScreenOCR/ScreenOCR.exe` 不能单独运行；完整便携版还需要同目录下的 `_internal` 运行文件和 OCR 模型。若启动时提示找不到 `dist/ScreenOCR/_internal/python313.dll`，说明下载内容缺少运行文件，并非单纯安装 Python 就能解决。
+
+请先按下方命令从源码构建，再运行生成目录中的 `ScreenOCR.exe`。构建需要 Python 3.13，并会联网安装依赖及下载 OCR 模型。构建完成后请保留并分发整个 `dist/ScreenOCR` 目录，不要只复制 exe。也可以使用项目发布页面提供的完整安装包（如果有）。
 
 ```powershell
 powershell -ExecutionPolicy Bypass -File scripts\build_portable.ps1
