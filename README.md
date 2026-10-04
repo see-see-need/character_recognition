@@ -1,6 +1,8 @@
-# 屏幕文字识别
+# character_recognition（屏幕文字识别）
 
 一款面向 Windows 的屏幕 OCR 工具。按 `Ctrl+Shift+S` 或点击“开始框选”，用鼠标左键拖出区域，松开后在本机识别文字并自动复制。
+
+自用项目，安装包在 `dist/installer` 目录下。
 
 ## 功能
 
